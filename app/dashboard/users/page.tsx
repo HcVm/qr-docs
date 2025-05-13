@@ -129,13 +129,13 @@ export default function UsersPage() {
           description: "El usuario ha sido actualizado correctamente",
         })
       } else {
-        // *** MODIFICACION AQUI: Llamar a la API route para invitar usuario ***
-        const response = await fetch('/api/users/invite', {
+        // *** MODIFICACION AQUI: Llamar a la API route para crear usuario con contraseña temporal ***
+        const response = await fetch('/api/users/invite', { // La ruta sigue siendo la misma, pero la lógica interna cambió
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email }), // Solo enviamos el email a la API route
+          body: JSON.stringify({ email }), // Solo enviamos el email; la contraseña se define en la API route
         });
 
         const result = await response.json();
@@ -143,21 +143,21 @@ export default function UsersPage() {
         if (!response.ok) {
           // Manejar errores de la API route
           // Por ejemplo, si el usuario ya existe
-          const errorMessage = result.error || 'Error al invitar al usuario';
+          const errorMessage = result.error || 'Error al crear el usuario en Supabase Auth';
           toast({
             title: "Error",
             description: errorMessage,
             variant: "destructive",
           });
-          return; // Detener el proceso si falla la invitación en Auth
+          return; // Detener el proceso si falla la creación en Auth
         }
 
-        // Si la invitación fue exitosa, ahora insertamos el usuario en nuestra tabla 'users'
-        // Usamos el ID del usuario creado por Supabase Authentication si está disponible
-        const invitedUserId = result.user?.id;
+        // Si la creación en Auth fue exitosa, ahora insertamos el usuario en nuestra tabla 'users'
+        // Usamos el ID del usuario creado por Supabase Authentication
+        const newUserId = result.user?.id;
 
          const { error: insertError } = await supabase.from("users").insert({
-            id: invitedUserId, // Usar el ID de Supabase Auth para vincular con la tabla 'users'
+            id: newUserId, // Usar el ID de Supabase Auth para vincular con la tabla 'users'
             email,
             full_name: fullName,
             department_id: departmentId || null,
@@ -165,23 +165,21 @@ export default function UsersPage() {
           });
 
         if (insertError) {
-             // Considerar qué hacer si falla la inserción en tu tabla después de invitar en Auth
-             console.error("Error inserting invited user into 'users' table:", insertError);
+             console.error("Error inserting new user into 'users' table:", insertError);
              toast({
                title: "Advertencia",
-               description: "Invitación enviada, pero falló la inserción en la tabla de usuarios.",
+               description: "Usuario creado en autenticación, pero falló la inserción en la tabla de usuarios.",
                variant: "destructive",
              });
-             // Dependiendo de los requisitos, podrías querer revertir la invitación en Auth
-             // Sin embargo, eso requiere más lógica y manejo de errores.
         } else {
+           // *** MODIFICACION AQUI: Mensaje de éxito para contraseña temporal ***
            toast({
-             title: "Invitación enviada",
-             description: "El usuario ha sido invitado por correo electrónico",
+             title: "Usuario creado",
+             description: "El usuario ha sido creado con la contraseña temporal 123456789. Informa al usuario que debe cambiarla al iniciar sesión.",
            });
+           // *** FIN MODIFICACION ***
         }
-
-        // *** FIN MODIFICACION ***
+        // *** FIN MODIFICACION PRINCIPAL ***
       }
 
       setOpen(false);
